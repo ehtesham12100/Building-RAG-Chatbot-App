@@ -1,0 +1,15 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+sqlalchemy>=2.0.28
+python-multipart>=0.0.9
+pypdf>=4.1.0
+chromadb>=0.4.24
+google-generativeai>=0.8.0
+groq>=0.11.0
+python-dotenv>=1.0.1
+aiofiles>=23.2.1
+requests>=2.31.0
+fpdf2>=2.8.0
+google-genai>=2.31.0

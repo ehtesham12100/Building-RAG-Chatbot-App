@@ -1,0 +1,34 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables & Secrets
+.env
+*.env
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Local Storage & Database
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/chroma_db/*
+!storage/chroma_db/.gitkeep
+storage/rag_app.db
+storage/rag_app.db-journal
+
+# Logs
+*.log
+logs/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

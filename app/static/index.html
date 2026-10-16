@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuQuery - RAG Document Chatbot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Markdown parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="brand-icon">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <div>
+            <h2>DocuQuery</h2>
+            <span class="badge-sub">RAG Engine</span>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="btn-icon mobile-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Upload Section -->
+      <div class="upload-section">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="pdfFileInput" accept="application/pdf" hidden>
+          <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+          <p><strong>Click to upload</strong> or drag & drop</p>
+          <span class="subtext">College notes, policies, legal docs (.pdf)</span>
+        </div>
+        <div id="uploadProgress" class="progress-bar-container" style="display: none;">
+          <div class="progress-bar" id="progressBar"></div>
+          <span id="progressText">Uploading & indexing chunks...</span>
+        </div>
+      </div>
+
+      <!-- Document List Section -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span><i class="fa-solid fa-folder-open"></i> Uploaded Documents</span>
+          <span id="docCount" class="counter">0</span>
+        </div>
+        <div class="filter-controls">
+          <button id="selectAllDocs" class="btn-xs">Select All</button>
+          <button id="deselectAllDocs" class="btn-xs">Clear Filter</button>
+        </div>
+        <div class="doc-list" id="documentList">
+          <div class="empty-docs">No documents uploaded yet</div>
+        </div>
+      </div>
+
+      <!-- History Section -->
+      <div class="sidebar-section history-section">
+        <div class="section-header">
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Conversations</span>
+          <button id="newChatBtn" class="btn-icon" title="New Chat"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div class="history-list" id="chatSessionsList">
+          <div class="empty-docs">No history yet</div>
+        </div>
+      </div>
+
+      <!-- Footer / Settings Button -->
+      <div class="sidebar-footer">
+        <button id="openSettingsBtn" class="btn-secondary w-full">
+          <i class="fa-solid fa-sliders"></i> LLM & Settings
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="chat-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <button id="mobileMenuBtn" class="btn-icon mobile-menu-btn" title="Open Documents & Settings">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="chat-info">
+            <h3 id="currentChatTitle">Document Q&A</h3>
+            <span id="activeFilterBadge" class="filter-badge">Querying: All Documents</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="model-badge">
+            <span class="pulse-dot"></span>
+            <span id="activeModelLabel">Gemini 3.8 Flash</span>
+          </div>
+          <button id="clearChatBtn" class="btn-outline" title="Clear conversation">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Messages Container -->
+      <section class="messages-container" id="messagesContainer">
+        <!-- Welcome empty state -->
+        <div class="welcome-banner" id="welcomeBanner">
+          <div class="welcome-icon">
+            <i class="fa-solid fa-file-pdf"></i>
+          </div>
+          <h2>Ask Anything About Your Documents</h2>
+          <p>Upload lecture notes, company handbooks, financial reports or contracts. The AI will retrieve exact paragraphs and cite the source pages.</p>
+          
+          <div class="sample-prompts">
+            <div class="prompt-chip" data-query="Give me a comprehensive summary of the main points in the uploaded document.">
+              <i class="fa-solid fa-align-left"></i>
+              <span>Summarize the main points of the document</span>
+            </div>
+            <div class="prompt-chip" data-query="What are the key policies, rules, or requirements mentioned?">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Key rules or requirements listed</span>
+            </div>
+            <div class="prompt-chip" data-query="List any critical dates, deadlines, or compliance requirements.">
+              <i class="fa-solid fa-calendar-check"></i>
+              <span>Important deadlines & dates</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Input Area -->
+      <footer class="input-area">
+        <form id="chatForm" class="chat-form">
+          <div class="input-wrapper">
+            <textarea 
+              id="chatInput" 
+              placeholder="Ask a question about your documents... (Shift + Enter for new line)"
+              rows="1"
+            ></textarea>
+            <button type="submit" id="sendBtn" class="send-btn" title="Send message">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </form>
+        <div class="input-footer-note">
+          Grounding with ChromaDB vector search + Google Gemini / Groq • Citations included with every answer
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-gear"></i> Configuration & API Keys</h3>
+        <button id="closeSettingsBtn" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Default LLM Provider</label>
+          <select id="providerSelect" class="form-control">
+            <option value="gemini">Google Gemini (Recommended)</option>
+            <option value="groq">Groq (Llama 3.3 70B - Ultra Fast)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="geminiKeyGroup">
+          <label>Google Gemini API Key</label>
+          <input type="password" id="geminiApiKeyInput" class="form-control" placeholder="Enter GEMINI_API_KEY (or set in .env)">
+          <small class="helper-text">Free API key available at <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a></small>
+        </div>
+
+        <div class="form-group" id="groqKeyGroup">
+          <label>Groq API Key</label>
+          <input type="password" id="groqApiKeyInput" class="form-control" placeholder="Enter GROQ_API_KEY (or set in .env)">
+          <small class="helper-text">Free API key available at <a href="https://console.groq.com/" target="_blank">Groq Console</a></small>
+        </div>
+
+        <div class="form-group">
+          <label>Top-K Retrieval Chunks: <span id="topKValue">4</span></label>
+          <input type="range" id="topKSlider" min="2" max="10" value="4" class="range-slider">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveSettingsBtn" class="btn-primary">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
