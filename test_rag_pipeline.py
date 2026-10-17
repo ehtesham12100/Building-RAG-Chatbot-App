@@ -7,12 +7,12 @@ def test_pipeline():
     assert sample_pdf.exists(), "Sample PDF not found!"
 
     print("1. Testing PDF text extraction and chunking...")
-    chunks = pdf_processor.process_pdf(
+    chunks, page_count = pdf_processor.process_pdf(
         file_path=str(sample_pdf),
         document_id=1,
         document_title="sample_company_policy.pdf"
     )
-    print(f"   Extracted {len(chunks)} chunks.")
+    print(f"   Extracted {len(chunks)} chunks across {page_count} pages.")
     assert len(chunks) > 0, "No chunks generated!"
     
     # Verify page numbers in chunk metadata

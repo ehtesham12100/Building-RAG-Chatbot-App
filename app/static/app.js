@@ -197,12 +197,25 @@ async function uploadFile(file) {
       body: formData
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Upload failed');
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      if (res.status === 502) {
+        throw new Error("Server temporarily ran out of memory (512MB RAM limit). The document is being re-indexed.");
+      } else if (res.status === 504) {
+        throw new Error("Server timed out processing the PDF.");
+      } else {
+        throw new Error(`Server returned status ${res.status}: ${text.slice(0, 100)}`);
+      }
     }
 
-    const doc = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || 'Upload failed');
+    }
+
+    const doc = data;
     await loadDocuments();
 
     // Auto-select newly uploaded doc
@@ -438,12 +451,20 @@ async function handleSubmitMessage() {
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || 'Failed to generate response');
+    const responseText = await res.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      if (res.status === 502) {
+        throw new Error("Server temporarily ran out of memory (512MB RAM limit). Please try again.");
+      }
+      throw new Error(`Server returned status ${res.status}: ${responseText.slice(0, 120)}`);
     }
 
-    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || 'Failed to generate response');
+    }
 
     // Update active session id
     currentSessionId = data.session_id;

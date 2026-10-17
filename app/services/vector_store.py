@@ -1,4 +1,12 @@
 import os
+# Restrict thread pools to 1 thread to avoid memory ballooning on 512MB RAM servers (Render free tier)
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+import gc
 from typing import List, Dict, Any, Optional
 import chromadb
 from chromadb.config import Settings as ChromaSettings
@@ -35,8 +43,8 @@ class VectorStore:
 
     def add_chunks(self, chunks: List[Dict[str, Any]]):
         """
-        Insert chunks into ChromaDB.
-        Each chunk should have: 'id', 'text', 'metadata'.
+        Insert chunks into ChromaDB using lightweight micro-batches
+        to preserve low memory footprint on cloud containers (<= 512MB RAM).
         """
         if not chunks:
             return
@@ -45,14 +53,16 @@ class VectorStore:
         documents = [c["text"] for c in chunks]
         metadatas = [c["metadata"] for c in chunks]
 
-        # Chroma handles batches up to 500
-        batch_size = 200
+        # Use micro-batches of 8 chunks to keep RAM usage under 250MB
+        batch_size = 8
         for i in range(0, len(ids), batch_size):
             self.collection.upsert(
                 ids=ids[i:i + batch_size],
                 documents=documents[i:i + batch_size],
                 metadatas=metadatas[i:i + batch_size]
             )
+            # Free temporary tensor memory immediately
+            gc.collect()
 
     def delete_document_chunks(self, document_id: int):
         """

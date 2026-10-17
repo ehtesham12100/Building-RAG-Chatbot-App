@@ -4,7 +4,9 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=7860 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    TOKENIZERS_PARALLELISM=false \
     HOME=/home/user
 
 # Install system dependencies
@@ -13,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user required by Hugging Face Spaces (UID 1000)
+# Create non-root user (UID 1000)
 RUN useradd -m -u 1000 user
 
 # Set working directory
@@ -36,8 +38,8 @@ RUN mkdir -p storage/uploads storage/chroma_db && \
 # Switch to non-root user
 USER user
 
-# Expose standard Hugging Face Spaces port
-EXPOSE 7860
+# Expose default port
+EXPOSE 8000 7860
 
-# Run FastAPI with Uvicorn on port 7860
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run FastAPI dynamically respecting $PORT
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

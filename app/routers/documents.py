@@ -55,7 +55,7 @@ async def upload_document(
 
     # 3. Process PDF and generate embeddings in ChromaDB
     try:
-        chunks = pdf_processor.process_pdf(
+        chunks, page_count = pdf_processor.process_pdf(
             file_path=target_path,
             document_id=doc_record.id,
             document_title=original_filename
@@ -67,13 +67,15 @@ async def upload_document(
             db.commit()
             return doc_record
 
-        # Determine page count from extracted pages
-        pages = pdf_processor.extract_text_by_pages(target_path)
-        doc_record.page_count = len(pages)
+        doc_record.page_count = page_count
         doc_record.chunk_count = len(chunks)
 
-        # Index into ChromaDB
+        # Index into ChromaDB in micro-batches
         vector_store.add_chunks(chunks)
+
+        del chunks
+        import gc
+        gc.collect()
 
         doc_record.status = "indexed"
         db.commit()

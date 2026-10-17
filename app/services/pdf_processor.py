@@ -165,6 +165,10 @@ class PDFProcessor:
                 })
                 chunk_global_idx += 1
 
-        return all_chunks
+        page_count = len(pages)
+        del pages
+        import gc
+        gc.collect()
+        return all_chunks, page_count
 
 pdf_processor = PDFProcessor()
